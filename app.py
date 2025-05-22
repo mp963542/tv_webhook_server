@@ -8,19 +8,31 @@ SIGNAL_FILE = "signals.json"
 def webhook():
     data = request.json
     data["timestamp"] = time.time()
-    data["signal_id"] = str(int(data["timestamp"]))
+    data["signal_id"] = str(int(data["timestamp"] * 1000))  # 毫秒級唯一 ID
+
     print("✅ 收到 TradingView 訊號：", data)
+
+    # 讀取現有訊號陣列（如無則初始化）
+    if os.path.exists(SIGNAL_FILE):
+        with open(SIGNAL_FILE, "r") as f:
+            signals = json.load(f)
+    else:
+        signals = []
+
+    signals.append(data)
+
     with open(SIGNAL_FILE, "w") as f:
-        json.dump(data, f)
-    return jsonify({"status": "ok", "signal_id": data["signal_id"]})
+        json.dump(signals, f)
+
+    return jsonify({"status": "ok", "received": data["signal_id"]})
 
 @app.route("/signals.json", methods=["GET"])
 def get_signals():
-    if not os.path.exists(SIGNAL_FILE):
-        return jsonify({"status": "no signal"})
-    with open(SIGNAL_FILE, "r") as f:
-        data = json.load(f)
-    return jsonify(data)
+    if os.path.exists(SIGNAL_FILE):
+        with open(SIGNAL_FILE, "r") as f:
+            return jsonify(json.load(f))
+    else:
+        return jsonify([])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
