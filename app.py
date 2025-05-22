@@ -8,9 +8,16 @@ RETENTION_SECONDS = 30  # 只保留 30 秒內訊號
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
-    data["timestamp"] = time.time()
+    data.setdefault("timestamp", time.time())
+    # 若是 ISO 格式字串，轉換為 float timestamp（確保 downstream 可以用）
+    if isinstance(data["timestamp"], str):
+        try:
+            dt = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
+            data["timestamp"] = dt.timestamp()
+        except Exception:
+            data["timestamp"] = time.time()
     data["signal_id"] = str(int(data["timestamp"] * 1000))
-
+    
     print("✅ 收到 TradingView 訊號：", data)
 
     # 讀取現有訊號陣列（如無則初始化）
