@@ -3,12 +3,13 @@ import json, time, os
 
 app = Flask(__name__)
 SIGNAL_FILE = "signals.json"
+RETENTION_SECONDS = 30  # 只保留 30 秒內訊號
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
     data["timestamp"] = time.time()
-    data["signal_id"] = str(int(data["timestamp"] * 1000))  # 毫秒級唯一 ID
+    data["signal_id"] = str(int(data["timestamp"] * 1000))
 
     print("✅ 收到 TradingView 訊號：", data)
 
@@ -18,6 +19,10 @@ def webhook():
             signals = json.load(f)
     else:
         signals = []
+
+    # 保留 30 秒內的訊號
+    now = time.time()
+    signals = [s for s in signals if now - s.get("timestamp", 0) <= RETENTION_SECONDS]
 
     signals.append(data)
 
